@@ -1,13 +1,13 @@
 require 'rails_helper'
 
-RSpec.describe CreditsExpirer do
+shared_examples_for 'credits expirer' do
   _ = nil
 
   context 'when a user has no credits' do
     it 'does not expire anything' do
       joe = create_user
 
-      CreditsExpirer.call(Date.current)
+      described_class.call(Date.current)
 
       expect(joe).to have_balance 0
       expect(joe).to have_no_reversal_credit
@@ -20,7 +20,7 @@ RSpec.describe CreditsExpirer do
 
       create_credit joe, 1_000, '2016-07-02', '2017-07-02'
 
-      CreditsExpirer.call('2017-07-02')
+      described_class.call('2017-07-02')
 
       expect(joe).to have_balance 0
       expect(joe).to have_new_reversal_credit -1_000
@@ -33,7 +33,7 @@ RSpec.describe CreditsExpirer do
 
       create_credit joe, 1_000, '2016-07-02', '2017-07-02', _, processed: true
 
-      CreditsExpirer.call('2017-07-02')
+      described_class.call('2017-07-02')
 
       expect(joe).to have_balance 1_000
       expect(joe).to have_no_reversal_credit
@@ -48,7 +48,7 @@ RSpec.describe CreditsExpirer do
       create_credit joe, -500,  '2016-06-01', _
       create_credit joe, 1_000, '2016-07-02', '2017-07-02'
 
-      CreditsExpirer.call('2017-01-05')
+      described_class.call('2017-01-05')
 
       expect(joe).to have_balance 1000
       expect(joe).to have_new_reversal_credit -500
@@ -66,7 +66,7 @@ RSpec.describe CreditsExpirer do
         create_credit joe, -500,  '2016-06-01', _
         create_credit joe, 1_000, '2016-07-02', '2017-07-02'
 
-        CreditsExpirer.call('2017-01-05')
+        described_class.call('2017-01-05')
 
         expect(joe).to have_balance 1000
         expect(joe).to have_new_reversal_credit -500
@@ -85,7 +85,7 @@ RSpec.describe CreditsExpirer do
         create_credit joe, -500,  '2016-06-01', _
         create_credit joe, 1_000, '2016-07-02', '2017-07-02'
 
-        CreditsExpirer.call('2017-01-05')
+        described_class.call('2017-01-05')
 
         expect(joe).to have_balance 1000
         expect(joe).to have_new_reversal_credit -500
@@ -103,7 +103,7 @@ RSpec.describe CreditsExpirer do
       create_credit joe, -500,  '2016-06-01', _
       create_credit joe, 1_000, '2016-07-02', '2017-07-02'
 
-      CreditsExpirer.call('2017-01-05')
+      described_class.call('2017-01-05')
 
       expect(joe).to have_balance 1_000
       expect(joe).to have_new_reversal_credit -1_500
@@ -119,7 +119,7 @@ RSpec.describe CreditsExpirer do
       create_credit joe, -500,  '2016-06-01', _
       create_credit joe, 1_000, '2016-07-02', '2017-07-02'
 
-      CreditsExpirer.call('2017-01-05')
+      described_class.call('2017-01-05')
 
       expect(joe).to have_balance 1_800
       expect(joe).to have_new_reversal_credit -500
@@ -136,7 +136,7 @@ RSpec.describe CreditsExpirer do
       create_credit joe, -500,  '2016-06-01', _
       create_credit joe, 1_000, '2016-07-02', '2017-07-02'
 
-      CreditsExpirer.call('2017-01-05')
+      described_class.call('2017-01-05')
 
       expect(joe).to have_balance 1_600
       expect(joe).to have_new_reversal_credit -500
@@ -153,7 +153,7 @@ RSpec.describe CreditsExpirer do
       create_credit joe, -500,  '2016-06-01', _
       create_credit joe, 1_000, '2016-07-02', '2017-07-02'
 
-      CreditsExpirer.call('2017-07-02')
+      described_class.call('2017-07-02')
 
       expect(bob).to have_balance 0
       expect(joe).to have_balance 0
@@ -182,22 +182,22 @@ RSpec.describe CreditsExpirer do
       expect(joe).to have_balance 2_300
       expect(bob).to have_balance 1_900
 
-      CreditsExpirer.call('2017-01-03')
+      described_class.call('2017-01-03')
 
       expect(joe).to have_balance 2_300
       expect(bob).to have_balance 1_100
 
-      CreditsExpirer.call('2017-01-05')
+      described_class.call('2017-01-05')
 
       expect(joe).to have_balance 2_300
       expect(bob).to have_balance 100
 
-      CreditsExpirer.call('2017-07-02')
+      described_class.call('2017-07-02')
 
       expect(joe).to have_balance 1_600
       expect(bob).to have_balance 100
 
-      CreditsExpirer.call('2017-09-05')
+      described_class.call('2017-09-05')
 
       expect(joe).to have_balance 600
       expect(bob).to have_balance 100
@@ -210,7 +210,7 @@ RSpec.describe CreditsExpirer do
       expect(joe).to have_balance 900
       expect(bob).to have_balance 900
 
-      CreditsExpirer.call('2017-10-10')
+      described_class.call('2017-10-10')
 
       expect(joe).to have_balance 600
       expect(bob).to have_balance 300
@@ -235,6 +235,14 @@ RSpec.describe CreditsExpirer do
     credit.update_column(:created_at, created_at)
     credit
   end
+end
+
+RSpec.describe CreditsExpirer do
+  it_behaves_like 'credits expirer'
+end
+
+RSpec.describe CreditsExpirerOneQuery do
+  it_behaves_like 'credits expirer'
 end
 
 RSpec::Matchers.define :have_new_reversal_credit do |amount|
