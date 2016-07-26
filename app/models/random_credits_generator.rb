@@ -1,65 +1,54 @@
 class RandomCreditsGenerator
   def initialize(
     user_ids:,
-    initial_balances: nil,
+    initial_balances: Credit.balance_by_user,
     initial_created_at: Time.new(2012, 2, 2),
     created_at_increment_samples: (1..80)
   )
     @user_ids = user_ids
-    @initial_balances = initial_balances
+    @balances = Hash.new(0).merge(initial_balances)
     @created_at = initial_created_at
     @created_at_increment_samples = created_at_increment_samples.to_a
   end
 
   def call(**options)
-    user_id, amount = pick_random_user_id_and_amount
+    user_id = pick_random_user_id
+    amount = pick_random_amount(user_id)
 
-    add_to_balance_cache(user_id, amount)
+    add_to_balance(user_id, amount)
     generate_credit(user_id, amount, options)
   end
 
   private
 
-  def pick_random_user_id_and_amount
-    user_id = @user_ids.sample
-    amount = generate_random_amount(user_id)
-
-    [user_id, amount]
+  def pick_random_user_id
+    @user_ids.sample
   end
 
-  def add_to_balance_cache(user_id, amount)
-    balances[user_id] += amount
+  def pick_random_amount(user_id)
+    RandomAmountGenerator.new(@balances[user_id]).call
   end
 
-  def generate_random_amount(user_id)
-    RandomAmountGenerator.new(balances[user_id]).call
-  end
-
-  def balances
-    @balances ||= Hash.new(0).merge(initial_balances)
-  end
-
-  def initial_balances
-    @initial_balances || Credit.balance_by_user
+  def add_to_balance(user_id, amount)
+    @balances[user_id] += amount
   end
 
   def generate_credit(user_id, amount, options)
-    created_at = next_created_at
+    created_at = pick_next_date
     with_expiration = options[:with_expiration] && amount > 0
     processed = !with_expiration
     expires_at = (created_at + 1.year).to_date if with_expiration
 
-    {
-      type: 'Credit',
+    { type: 'Credit',
       user_id: user_id,
       amount: amount,
       created_at: created_at,
+      updated_at: created_at,
       expires_at: expires_at,
-      processed: processed
-    }
+      processed: processed }
   end
 
-  def next_created_at
+  def pick_next_date
     @created_at += @created_at_increment_samples.sample
   end
 
