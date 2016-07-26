@@ -40,7 +40,9 @@ class RandomCreditsGeneratorTest < ActiveSupport::TestCase
     assert_operator second_created_at, :>, first_created_at
   end
 
-  test 'with_expiration option generates positive unprocessed amounts with 1 year expiration or negative processed amounts without expiration' do
+  test 'with_expiration option generates positive unprocessed amounts ' +
+       'with 1 year expiration or negative processed amounts without ' +
+       'expiration' do
     initial_created_at = Time.new(2017, 1, 1, 1, 2)
     generator = RandomCreditsGenerator.new(
       user_ids: [1],
