@@ -1,4 +1,4 @@
-class CreditsExpirerOneQuery
+class CreditsExpirerOneQueryCte
   def self.call(*args)
     new(*args).call
   end
@@ -18,7 +18,14 @@ class CreditsExpirerOneQuery
 
   def create_reversal_credits
     Credit.connection.execute(
-      "INSERT INTO credits(amount, user_id, type, created_at, updated_at)
+      "WITH cr AS (
+        SELECT user_id, MIN(created_at) AS created_at
+        FROM credits
+        WHERE user_id IN (#{user_ids_with_credits_to_process.to_sql})
+        AND expires_at IS NOT NULL
+        GROUP BY user_id
+      )
+      INSERT INTO credits(amount, user_id, type, created_at, updated_at)
       #{reversal_credits_records.to_sql}"
     )
   end
@@ -56,12 +63,13 @@ class CreditsExpirerOneQuery
 
   def negative_credits
     Credit
-      .select('SUM(amount) as amount, user_id')
+      .select('SUM(negative.amount) as amount, negative.user_id')
       .from('credits AS negative')
-      .where('user_id IN (?)', user_ids_with_credits_to_process)
-      .where('created_at >= (?)', creation_date_of_first_expiring_credit)
-      .where('amount < 0')
-      .group(:user_id)
+      .joins('INNER JOIN cr ON cr.user_id = negative.user_id')
+      .where('negative.user_id IN (?)', user_ids_with_credits_to_process)
+      .where('negative.created_at >= cr.created_at')
+      .where('negative.amount < 0')
+      .group('negative.user_id')
   end
 
   def user_ids_with_credits_to_process

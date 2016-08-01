@@ -5,7 +5,7 @@ shared_examples_for 'credits expirer' do
 
   context 'when a user has no credits' do
     it 'does not expire anything' do
-      joe = create_user
+      joe = create_user('Joe')
 
       described_class.call(Date.current)
 
@@ -16,7 +16,7 @@ shared_examples_for 'credits expirer' do
 
   context 'when a user has no debits' do
     it 'expires all credits' do
-      joe = create_user
+      joe = create_user('Joe')
 
       create_credit joe, 1_000, '2016-07-02', '2017-07-02'
 
@@ -29,7 +29,7 @@ shared_examples_for 'credits expirer' do
 
   context 'when user has credits already processed' do
     it 'does not create reversal credits' do
-      joe = create_user
+      joe = create_user('Joe')
 
       create_credit joe, 1_000, '2016-07-02', '2017-07-02', _, processed: true
 
@@ -42,7 +42,7 @@ shared_examples_for 'credits expirer' do
 
   context 'when a user has one credit to expire' do
     it 'expires the credit and returns the correct balance' do
-      joe = create_user
+      joe = create_user('Joe')
 
       create_credit joe, 1_000, '2016-01-05', '2017-01-05'
       create_credit joe, -500,  '2016-06-01', _
@@ -58,8 +58,8 @@ shared_examples_for 'credits expirer' do
   context 'with two users' do
     context 'when credits of both users are due the same day' do
       it "expires all credits and returns correct balances" do
-        joe = create_user
-        bob = create_user
+        joe = create_user('Joe')
+        bob = create_user('Bob')
 
         create_credit joe, 1_000, '2016-01-05', '2017-01-05'
         create_credit bob, 700,   '2016-01-05', '2017-01-05'
@@ -77,8 +77,8 @@ shared_examples_for 'credits expirer' do
 
     context 'when only one user has due credits' do
       it "expires credits from that user and keeps other one's balance intact" do
-        joe = create_user
-        bob = create_user
+        joe = create_user('Joe')
+        bob = create_user('Bob')
 
         create_credit joe, 1_000, '2016-01-05', '2017-01-05'
         create_credit bob, 700,   '2016-01-06', '2017-01-06'
@@ -96,7 +96,7 @@ shared_examples_for 'credits expirer' do
 
   context 'when a user has two credits which expire the same day' do
     it 'expires both credits and returns the correct balance' do
-      joe = create_user
+      joe = create_user('Joe')
 
       create_credit joe, 1_000, '2016-01-05', '2017-01-05'
       create_credit joe, 1_000, '2016-01-05', '2017-01-05'
@@ -112,7 +112,7 @@ shared_examples_for 'credits expirer' do
 
   context 'when a user has credits without expiration date' do
     it 'does not factor in the amount without expiration date' do
-      joe = create_user
+      joe = create_user('Joe')
 
       create_credit joe, 800,   '2016-01-04', _
       create_credit joe, 1_000, '2016-01-05', '2017-01-05'
@@ -128,7 +128,7 @@ shared_examples_for 'credits expirer' do
 
   context 'when a user has amounts prior to first credit with expiration date' do
     it 'does not factor in those amounts' do
-      joe = create_user
+      joe = create_user('Joe')
 
       create_credit joe, 800,   '2016-01-02', _
       create_credit joe, -200,  '2016-01-04', _
@@ -145,8 +145,8 @@ shared_examples_for 'credits expirer' do
 
   context 'when a user with no due credits has unprocessed credits' do
     it 'older credits gets expired and marked as processed' do
-      joe = create_user
-      bob = create_user
+      joe = create_user('Joe')
+      bob = create_user('Bob')
 
       create_credit bob, 1_000, '2015-12-05', '2016-12-05'
       create_credit joe, 1_000, '2016-01-05', '2017-01-05'
@@ -163,8 +163,8 @@ shared_examples_for 'credits expirer' do
 
   context 'with all main cases' do
     it 'expires all credits correctly' do
-      joe = create_user
-      bob = create_user
+      joe = create_user('Joe')
+      bob = create_user('Bob')
 
       create_credit bob, 200,   '2016-01-02', _
       create_credit joe, 800,   '2016-01-02', _
@@ -217,10 +217,8 @@ shared_examples_for 'credits expirer' do
     end
   end
 
-  def create_user
-    user = User.random
-    user.save!
-    user
+  def create_user(name = nil)
+    User.create!(name: name)
   end
 
   def create_credit(user, amount, created_at, expires_at = nil, type = nil, **attrs)
@@ -242,6 +240,18 @@ RSpec.describe CreditsExpirer do
 end
 
 RSpec.describe CreditsExpirerOneQuery do
+  it_behaves_like 'credits expirer'
+end
+
+RSpec.describe CreditsExpirerWorse do
+  it_behaves_like 'credits expirer'
+end
+
+RSpec.describe CreditsExpirerWorseOfAll do
+  it_behaves_like 'credits expirer'
+end
+
+RSpec.describe CreditsExpirerOneQueryCte do
   it_behaves_like 'credits expirer'
 end
 
