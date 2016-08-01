@@ -1,7 +1,9 @@
 require 'pathname'
 require Pathname(__dir__).join('config', 'environment')
 
-DATE_RANGE = Date.new(2013, 12, 15)..Date.new(2014, 5, 15)
+first_date = Date.new(2013, 12, 15)
+
+DATE_RANGE = (first_date)..(first_date + 10.days)
 SUBJECT_CLASS = ARGV[0].constantize
 
 def cleanup!
@@ -29,6 +31,8 @@ def avg_runtime(stats)
   stats.sum { |v| v[1] } / stats.count
 end
 
+cleanup!
+
 stats = DATE_RANGE.each.with_object({}) do |date, memo|
   puts
 
@@ -39,6 +43,7 @@ stats = DATE_RANGE.each.with_object({}) do |date, memo|
   memo[date] = results[0].real
 end
 
+puts
 puts "Max day runtime: #{max_runtime(stats)}"
 puts "Min day runtime: #{min_runtime(stats)}"
 puts "Avg runtime: #{avg_runtime(stats)}"
